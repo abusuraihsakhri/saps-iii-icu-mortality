@@ -12,13 +12,28 @@ import argparse
 import csv
 import json
 import math
+import os
 import sys
 from typing import Dict, Any, List, Optional
+
+
+def _validate_numeric_inputs(params: Dict[str, Any]) -> None:
+    """Validate that numeric inputs are within safe bounds."""
+    MAX_SAFE_VALUE = 1e6
+    for k, v in params.items():
+        if isinstance(v, (int, float)):
+            if math.isnan(v) or math.isinf(v):
+                raise ValueError(f"Parameter '{k}' must be a finite number, got {v}")
+            if abs(v) > MAX_SAFE_VALUE:
+                raise ValueError(f"Parameter '{k}' exceeds safe bounds (|{v}| > {MAX_SAFE_VALUE})")
 
 
 def calculate_metrics(**kwargs) -> Dict[str, Any]:
     """
     Core domain algorithm for saps-iii-icu-mortality.
+
+    Validates inputs, computes a weighted score from numeric parameters,
+    and returns a classification with clinical recommendation.
     """
     params = {}
     for k, v in kwargs.items():
@@ -27,6 +42,9 @@ def calculate_metrics(**kwargs) -> Dict[str, Any]:
                 params[k] = float(v)
             except (ValueError, TypeError):
                 params[k] = str(v)
+
+    # Validate numeric inputs for safety
+    _validate_numeric_inputs(params)
 
     # Deterministic domain logic
     numeric_vals = [val for val in params.values() if isinstance(val, (int, float))]
@@ -37,7 +55,7 @@ def calculate_metrics(**kwargs) -> Dict[str, Any]:
         score += nv * (1.0 / idx)
 
     rounded_score = round(score, 2)
-    
+
     # Classification / tiering
     if rounded_score < 10.0:
         tier = "Low / Standard"
@@ -65,8 +83,24 @@ def process_single(args) -> None:
     print(json.dumps(res, indent=2))
 
 
+def _safe_resolve_path(path_str: str) -> str:
+    """Resolve and validate a file path, preventing directory traversal."""
+    # Check for traversal patterns before resolution (handles both / and \\)
+    normalized = path_str.replace("\\", "/")
+    if ".." in normalized.split("/"):
+        raise ValueError(f"Path traversal detected in: {path_str}")
+    resolved = os.path.realpath(os.path.abspath(path_str))
+    return resolved
+
+
 def process_batch(input_csv: str, output_csv: str) -> None:
-    with open(input_csv, mode="r", encoding="utf-8-sig") as f:
+    input_path = _safe_resolve_path(input_csv)
+    output_path = _safe_resolve_path(output_csv)
+
+    if not os.path.isfile(input_path):
+        raise FileNotFoundError(f"Input CSV not found: {input_path}")
+
+    with open(input_path, mode="r", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         fieldnames = list(reader.fieldnames or [])
         rows = list(reader)
@@ -82,12 +116,17 @@ def process_batch(input_csv: str, output_csv: str) -> None:
         row_dict["clinical_recommendation"] = calc_res["clinical_recommendation"]
         out_rows.append(row_dict)
 
-    with open(output_csv, mode="w", encoding="utf-8", newline="") as f:
+    # Ensure output directory exists
+    out_dir = os.path.dirname(output_path)
+    if out_dir and not os.path.isdir(out_dir):
+        os.makedirs(out_dir, exist_ok=True)
+
+    with open(output_path, mode="w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=out_fields)
         writer.writeheader()
         writer.writerows(out_rows)
 
-    print(f"Processed {len(out_rows)} records -> {output_csv}")
+    print(f"Processed {len(out_rows)} records -> {output_path}")
 
 
 def main(argv=None):

@@ -1,7 +1,7 @@
-# Saps III Icu Mortality
+# SAPS III ICU Mortality
 
-> **Domain:** Clinical Decision Support & Biomedical Computing  
-> **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
+> **Domain:** Clinical Decision Support & Biomedical Computing
+> **Reference Guidelines & Standards:** Standard Clinical Formulations & ISO/IEC Quality Frameworks
 
 <div align="center">
 
@@ -16,101 +16,171 @@
 
 ---
 
-## 📖 What It Does
+## Overview
 
-Simplified Acute Physiology Score III (SAPS 3)
-Calculates SAPS 3 score and customized logistic equation for ICU admission mortality prediction.
+Simplified Acute Physiology Score III (SAPS 3) calculator for ICU admission mortality prediction.
 
-Zero-dependency Python implementation with single and batch evaluation.
-Author: Dr. Abu Suraih Sakhri
-License: MIT
+This project provides a zero-dependency Python implementation with single and batch evaluation capabilities, featuring a multi-agent enterprise architecture with PHI protection and cryptographic audit trails.
 
----
-
-## ⚙️ Key Capabilities & Algorithmic Modules
-
-### 🔬 Analytical Functions
-
-- **`calculate_metrics()`**: Core domain algorithm for saps-iii-icu-mortality.
-- **`process_single()`** — calculates and validates process_single parameters.
-- **`process_batch()`** — calculates and validates process_batch parameters.
-- **`main()`** — calculates and validates main parameters.
+**Author:** Dr. Abu Suraih Sakhri
+**License:** MIT
 
 ---
 
-## 📐 Mathematical Formulation & Logic
+## Features
 
-```text
-  score = primary_val
-  rounded_score = round(score, 2)
-  res = calculate_metrics(**kwargs)
-  calc_res = calculate_metrics(**r)
-```
+### Core Calculation Engine (`saps3_calc.py`)
+- **`calculate_metrics()`** - Core scoring algorithm with input validation
+- **`process_single()`** - Evaluate a single case with parameterized inputs
+- **`process_batch()`** - Process CSV files with multiple records
+
+### Enterprise Agent Framework (`agents/`)
+- **Multi-Worker Evaluation** - InvariantQC, SafetyEscalation, and ProtocolConformance workers
+- **PHI Outbound Guard** - AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers
+- **HMAC-SHA256 Audit Trail** - Chained, cryptographically signed logs for every evaluation
+- **FastAPI REST API** - OpenAPI 3.1 endpoints with Prometheus telemetry
+
+### Enrichment Modules (`enrichment.py`)
+- Ventilator Weaning Readiness Prediction
+- Fluid Responsiveness Assessment
+- Vasopressor Titration Guidance
+- RRT Activation Auto-Trigger
+- Organ Donor Management Protocol
+- Prone Positioning Decision Support
+- Family Communication Auto-Generation
+- Delirium Screening Integration
 
 ---
 
-## 💻 CLI Quickstart & Usage
+## Installation
 
-### 1. Guided Interactive Mode
 ```bash
-python cli.py
+# Clone the repository
+git clone https://github.com/abusuraihsakhri/saps-iii-icu-mortality.git
+cd saps-iii-icu-mortality
+
+# Install dependencies
+pip install fastapi uvicorn pydantic pytest
 ```
 
-### 2. Direct Parameterized Evaluation
+---
+
+## Usage
+
+### CLI - Single Case Evaluation
 ```bash
-python cli.py --task-id <value> --target <value> --primary <value> --secondary <value>
+python saps3_calc.py single --v1 14.5 --v2 4.2 --v3 1.8
 ```
 
-### Parameter Reference
-- `--task-id`: Specifies input measurement or parameter value.
-- `--target`: Specifies input measurement or parameter value.
-- `--primary`: Specifies input measurement or parameter value.
-- `--secondary`: Specifies input measurement or parameter value.
-- `--critical`: Specifies input measurement or parameter value.
-- `--status`: Specifies input measurement or parameter value.
-- `--input`: Specifies input measurement or parameter value.
-- `--output`: Specifies input measurement or parameter value.
+### CLI - Batch CSV Processing
+```bash
+python saps3_calc.py batch -i sample.csv -o results.csv
+```
 
-### Input Data Schema
+### Enterprise CLI
+```bash
+# Run audit evaluation
+python cli.py audit --task-id TASK-001 --primary 28.5 --secondary 14.2
+
+# Batch processing
+python cli.py batch -i sample.csv -o results.csv
+
+# Verify audit trail integrity
+python cli.py verify-audit
+
+# Launch REST API server
+python cli.py serve --host 127.0.0.1 --port 8000
+```
+
+### REST API
+```bash
+# Start server
+python cli.py serve
+
+# Health check
+curl http://localhost:8000/health
+
+# Process audit
+curl -X POST http://localhost:8000/api/audit \
+  -H "Content-Type: application/json" \
+  -d '{"task-id": "T001", "target_identifier": "KEY-01", "primary_metric": 25.0}'
+
+# View metrics
+curl http://localhost:8000/metrics
+```
+
+---
+
+## Input Data Schema
 
 | Field | Description | Requirement |
 |:------|:------------|:------------|
-| `Patient_ID` | Parameter / observation metric | Required |
-| `v1` | Parameter / observation metric | Required |
-| `v2` | Parameter / observation metric | Required |
-| `v3` | Parameter / observation metric | Required |
+| `Patient_ID` | Patient identifier | Required |
+| `v1` | Primary measurement value | Required |
+| `v2` | Secondary measurement value | Required |
+| `v3` | Tertiary measurement value | Required |
 
 ---
 
-## 🛡️ Security & Enterprise Architecture
+## Security
 
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
+- **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers
+- **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation
+- **Input Validation:** Numeric bounds checking and NaN/Inf detection
+- **Path Traversal Protection:** File path validation for batch operations
+- **Secure Defaults:** Auto-generated cryptographic secrets when not explicitly configured
 
 ---
 
-## 🧪 Testing & Verification
-
-Run the automated test suite:
+## Testing
 
 ```bash
+# Run full test suite
 pytest -v
-```
 
-Execute high-throughput batch simulation benchmarks:
+# Run with coverage
+pytest -v --cov
 
-```bash
-python simulator.py --tasks 1000 --concurrency 8
+# Run simulation benchmark
+python simulator.py 1000
 ```
 
 ---
 
-## 🐳 Container Deployment
+## Docker Deployment
 
 ```bash
+# Build and run
 docker build -t saps-iii-icu-mortality .
-docker run -p 8000:8000 saps-iii-icu-mortality
+docker run -p 8000:8000 -e AUDIT_SECRET_KEY=your-secret-key saps-iii-icu-mortality
+
+# Or use docker-compose
+docker-compose up -d
+```
+
+---
+
+## Project Structure
+
+```
+saps-iii-icu-mortality/
+├── agents/                 # Enterprise agent framework
+│   ├── api.py             # FastAPI REST server
+│   ├── base.py            # Security, PHI guard, audit trail
+│   ├── models.py          # Pydantic data models
+│   ├── supervisor.py      # Multi-agent orchestrator
+│   ├── workers.py         # Specialized evaluation workers
+│   ├── llm_factory.py     # LLM provider abstraction
+│   ├── metrics.py         # Prometheus metrics
+│   ├── learning.py        # Bayesian calibration engine
+│   └── streamer.py        # WebSocket telemetry
+├── tests/                 # Test suite
+├── saps3_calc.py          # Core calculation engine
+├── cli.py                 # Enterprise CLI
+├── enrichment.py          # Clinical enrichment modules
+├── simulator.py           # High-throughput testing
+├── web/index.html         # Operations console
+├── Dockerfile             # Container definition
+├── docker-compose.yml     # Compose configuration
+└── pyproject.toml         # Project metadata
 ```
