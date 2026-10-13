@@ -9,7 +9,7 @@ from saps3_calc import calculate_metrics, mortality_probability, process_batch, 
 
 
 @pytest.mark.parametrize(("score", "expected"), [
-    (0, 0.0000258754),
+    (0, 0.0000258753719683624),
     (16, 0.0017230994),
     (35, 0.0353525914),
     (50, 0.1734936164),
