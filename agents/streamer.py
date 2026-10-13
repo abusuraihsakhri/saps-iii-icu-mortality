@@ -1,5 +1,5 @@
 """
-Live WebSocket Distributed Component Telemetry Streamer for saps-iii-icu-mortality.
+WebSocket broadcaster prototype; no websocket server is wired in the API for saps-iii-icu-mortality.
 """
 import json
 import asyncio
