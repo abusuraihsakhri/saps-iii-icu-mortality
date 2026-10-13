@@ -21,7 +21,7 @@ app = FastAPI(
 
 
 class ChatRequest(BaseModel):
-    query: str
+    query: str = Field(min_length=1, max_length=2000)
 
 
 class MortalityRequest(BaseModel):
@@ -48,7 +48,7 @@ def metrics():
     return {
         "dossiers_processed_total": len(supervisor.dossier_registry),
         "audit_blocks_total": len(AuditLogger.get_trail()),
-        "system_status": "NOMINAL_OPTIMAL"
+        "system_status": "demonstration-in-memory"
     }
 
 
