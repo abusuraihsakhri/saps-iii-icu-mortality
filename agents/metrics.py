@@ -1,5 +1,5 @@
 """
-Prometheus Operational Metrics Exporter for saps-iii-icu-mortality.
+Legacy in-memory demonstration metrics class (not the HTTP /metrics route) for saps-iii-icu-mortality.
 """
 import time
 from typing import Dict, Any
