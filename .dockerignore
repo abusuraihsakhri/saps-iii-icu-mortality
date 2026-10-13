@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+.venv
+venv
+__pycache__
+.pytest_cache
+*.pyc
+.coverage
+htmlcov
+dist
+build
+*.egg-info
+results.csv
+output.csv
