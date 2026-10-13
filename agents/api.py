@@ -3,7 +3,10 @@ FastAPI REST API Server for Saps Iii Icu Mortality.
 """
 from typing import Dict, Any, List
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from fastapi.responses import FileResponse
+from pathlib import Path
+from saps3_calc import calculate_metrics
 from .base import AuditLogger, PHIGuard
 from .models import SystemTaskPayload, ConsensusDossier
 from .supervisor import SystemSupervisor
@@ -12,8 +15,8 @@ supervisor = SystemSupervisor(model_provider="mock")
 
 app = FastAPI(
     title="Saps Iii Icu Mortality API",
-    description="Enterprise Distributed Component Platform (Clinical & Biomedical AI)",
-    version="3.0.0-ENTERPRISE",
+    description="SAPS 3 global hospital-mortality conversion, plus a legacy demonstration audit API (not for patient triage).",
+    version="3.1.0",
 )
 
 
@@ -21,9 +24,23 @@ class ChatRequest(BaseModel):
     query: str
 
 
+class MortalityRequest(BaseModel):
+    saps3_score: int = Field(strict=True, ge=0, le=217, description="Precomputed SAPS 3 admission score")
+
+
+@app.get("/", include_in_schema=False)
+def homepage():
+    return FileResponse(Path(__file__).resolve().parent.parent / "index.html")
+
+
+@app.post("/api/mortality", summary="Estimate hospital mortality using the global SAPS 3 equation")
+def api_mortality(payload: MortalityRequest):
+    return calculate_metrics(saps3_score=payload.saps3_score)
+
+
 @app.get("/health")
 def health():
-    return {"status": "HEALTHY", "service": "saps-iii-icu-mortality", "domain": "Clinical & Biomedical AI", "standard": "CAP / CLSI / ISO Standards", "version": "3.0.0-ENTERPRISE"}
+    return {"status": "ok", "service": "saps-iii-icu-mortality", "version": "3.1.0"}
 
 
 @app.get("/metrics")
@@ -35,13 +52,13 @@ def metrics():
     }
 
 
-@app.post("/api/audit")
+@app.post("/api/audit", deprecated=True, summary="Legacy threshold demonstration (not clinical SAPS 3)")
 def api_audit(payload: SystemTaskPayload):
     dossier = supervisor.process_task(payload)
     return dossier.to_dict()
 
 
-@app.post("/api/chat")
+@app.post("/api/chat", deprecated=True, summary="Legacy mock chat demonstration")
 def api_chat(req: ChatRequest):
     try:
         ans = supervisor.query_supervisory_chat(req.query)
