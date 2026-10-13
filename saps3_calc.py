@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""
-Simplified Acute Physiology Score III (SAPS 3)
-Calculates SAPS 3 score and customized logistic equation for ICU admission mortality prediction.
+"""SAPS 3 global model: hospital-mortality probability from a *precomputed* score.
 
-Zero-dependency Python implementation with single and batch evaluation.
-Author: Dr. Abu Suraih Sakhri
-License: MIT
+Moreno et al. Intensive Care Med 2005;31:1345-1355.
+DOI: 10.1007/s00134-005-2763-5
+
+This module does NOT calculate the 20-variable SAPS 3 admission score.
+It must not be used to determine treatment or individual prognosis.
 """
 
 import argparse
@@ -13,145 +13,123 @@ import csv
 import json
 import math
 import os
-import sys
-from typing import Dict, Any, List, Optional
+import tempfile
+from typing import Any
 
 
-def _validate_numeric_inputs(params: Dict[str, Any]) -> None:
-    """Validate that numeric inputs are within safe bounds."""
-    MAX_SAFE_VALUE = 1e6
-    for k, v in params.items():
-        if isinstance(v, (int, float)):
-            if math.isnan(v) or math.isinf(v):
-                raise ValueError(f"Parameter '{k}' must be a finite number, got {v}")
-            if abs(v) > MAX_SAFE_VALUE:
-                raise ValueError(f"Parameter '{k}' exceeds safe bounds (|{v}| > {MAX_SAFE_VALUE})")
+MODEL_ID = "SAPS3-2005-global"
+SOURCE_DOI = "10.1007/s00134-005-2763-5"
 
 
-def calculate_metrics(**kwargs) -> Dict[str, Any]:
-    """
-    Core domain algorithm for saps-iii-icu-mortality.
+def _validate_score(value: Any) -> int:
+    """Require a finite, integral published SAPS 3 score (theoretical range 0–217)."""
+    if isinstance(value, bool):
+        raise ValueError("SAPS 3 score must be an integer between 0 and 217")
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("SAPS 3 score must be an integer between 0 and 217") from exc
+    if not math.isfinite(number) or not number.is_integer() or not 0 <= number <= 217:
+        raise ValueError("SAPS 3 score must be an integer between 0 and 217")
+    return int(number)
 
-    Validates inputs, computes a weighted score from numeric parameters,
-    and returns a classification with clinical recommendation.
-    """
-    params = {}
-    for k, v in kwargs.items():
-        if v is not None:
-            try:
-                params[k] = float(v)
-            except (ValueError, TypeError):
-                params[k] = str(v)
 
-    # Validate numeric inputs for safety
-    _validate_numeric_inputs(params)
+def mortality_probability(saps3_score: Any) -> float:
+    """Return probability of *in-hospital* death using the published global equation."""
+    score = _validate_score(saps3_score)
+    logit = -32.6659 + 7.3068 * math.log(score + 20.5958)
+    # Numerically stable logistic function.
+    if logit >= 0:
+        return 1.0 / (1.0 + math.exp(-logit))
+    exponential = math.exp(logit)
+    return exponential / (1.0 + exponential)
 
-    # Deterministic domain logic
-    numeric_vals = [val for val in params.values() if isinstance(val, (int, float))]
-    primary_val = numeric_vals[0] if numeric_vals else 1.0
 
-    score = primary_val
-    for idx, nv in enumerate(numeric_vals[1:], start=2):
-        score += nv * (1.0 / idx)
-
-    rounded_score = round(score, 2)
-
-    # Classification / tiering
-    if rounded_score < 10.0:
-        tier = "Low / Standard"
-        action = "Standard monitoring or negative cutoff"
-    elif rounded_score < 25.0:
-        tier = "Moderate / Intermediate"
-        action = "Close observation or secondary evaluation"
-    else:
-        tier = "High / Severe"
-        action = "Urgent clinical intervention or primary positive finding"
-
+def calculate_metrics(*, saps3_score: Any) -> dict[str, Any]:
+    """Convert an existing SAPS 3 admission score; no unvalidated triage categories."""
+    score = _validate_score(saps3_score)
+    probability = mortality_probability(score)
     return {
-        "tool": "saps-iii-icu-mortality",
-        "score": rounded_score,
-        "classification": tier,
-        "clinical_recommendation": action,
-        "inputs_evaluated": len(params),
+        "saps3_score": score,
+        "predicted_hospital_mortality": probability,
+        "predicted_hospital_mortality_percent": round(probability * 100, 2),
+        "model": MODEL_ID,
+        "outcome": "In-hospital mortality",
     }
 
 
-def process_single(args) -> None:
-    kwargs = vars(args)
-    kwargs.pop("func", None)
-    res = calculate_metrics(**kwargs)
-    print(json.dumps(res, indent=2))
+def process_batch(input_csv: str, output_csv: str) -> int:
+    """Process CSV with column 'saps3_score'; preserve other columns locally."""
+    source = os.path.realpath(os.path.abspath(input_csv))
+    target = os.path.realpath(os.path.abspath(output_csv))
+    if source == target:
+        raise ValueError("Input and output CSV must be different files")
+    if not os.path.isfile(source):
+        raise FileNotFoundError(f"Input CSV not found: {source}")
+
+    with open(source, "r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        fields = reader.fieldnames or []
+        if not fields or "saps3_score" not in fields:
+            raise ValueError("Input CSV must contain a 'saps3_score' header")
+        if len(fields) != len(set(fields)):
+            raise ValueError("Input CSV contains duplicate column headers")
+        results = []
+        for index, row in enumerate(reader, start=2):
+            if None in row or any(value is None for value in row.values()):
+                raise ValueError(f"Malformed CSV at line {index}")
+            try:
+                result = calculate_metrics(saps3_score=row["saps3_score"])
+            except ValueError as exc:
+                raise ValueError(f"CSV line {index}: {exc}") from exc
+            row["predicted_hospital_mortality"] = f'{result["predicted_hospital_mortality"]:.8f}'
+            row["predicted_hospital_mortality_percent"] = f'{result["predicted_hospital_mortality_percent"]:.2f}'
+            results.append(row)
+
+    output_fields = list(fields)
+    for name in ("predicted_hospital_mortality", "predicted_hospital_mortality_percent"):
+        if name not in output_fields:
+            output_fields.append(name)
+    output_dir = os.path.dirname(target)
+    os.makedirs(output_dir, exist_ok=True)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", newline="", dir=output_dir,
+            prefix=".saps3-", suffix=".csv", delete=False
+        ) as handle:
+            temp_path = handle.name
+            writer = csv.DictWriter(handle, fieldnames=output_fields)
+            writer.writeheader()
+            writer.writerows(results)
+        os.replace(temp_path, target)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
+    return len(results)
 
 
-def _safe_resolve_path(path_str: str) -> str:
-    """Resolve and validate a file path, preventing directory traversal."""
-    # Check for traversal patterns before resolution (handles both / and \\)
-    normalized = path_str.replace("\\", "/")
-    if ".." in normalized.split("/"):
-        raise ValueError(f"Path traversal detected in: {path_str}")
-    resolved = os.path.realpath(os.path.abspath(path_str))
-    return resolved
-
-
-def process_batch(input_csv: str, output_csv: str) -> None:
-    input_path = _safe_resolve_path(input_csv)
-    output_path = _safe_resolve_path(output_csv)
-
-    if not os.path.isfile(input_path):
-        raise FileNotFoundError(f"Input CSV not found: {input_path}")
-
-    with open(input_path, mode="r", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        fieldnames = list(reader.fieldnames or [])
-        rows = list(reader)
-
-    out_fields = fieldnames + ["score", "classification", "clinical_recommendation"]
-    out_rows = []
-
-    for r in rows:
-        calc_res = calculate_metrics(**r)
-        row_dict = dict(r)
-        row_dict["score"] = calc_res["score"]
-        row_dict["classification"] = calc_res["classification"]
-        row_dict["clinical_recommendation"] = calc_res["clinical_recommendation"]
-        out_rows.append(row_dict)
-
-    # Ensure output directory exists
-    out_dir = os.path.dirname(output_path)
-    if out_dir and not os.path.isdir(out_dir):
-        os.makedirs(out_dir, exist_ok=True)
-
-    with open(output_path, mode="w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=out_fields)
-        writer.writeheader()
-        writer.writerows(out_rows)
-
-    print(f"Processed {len(out_rows)} records -> {output_path}")
-
-
-def main(argv=None):
-    parser = argparse.ArgumentParser(description="Simplified Acute Physiology Score III (SAPS 3)")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    # Single parser
-    single_parser = subparsers.add_parser("single", help="Evaluate single case")
-    single_parser.add_argument("--v1", type=float, default=10.0, help="Primary parameter")
-    single_parser.add_argument("--v2", type=float, default=5.0, help="Secondary parameter")
-    single_parser.add_argument("--v3", type=float, default=2.0, help="Tertiary parameter")
-    single_parser.set_defaults(func=process_single)
-
-    # Batch parser
-    batch_parser = subparsers.add_parser("batch", help="Process batch CSV")
-    batch_parser.add_argument("-i", "--input", required=True, help="Input CSV")
-    batch_parser.add_argument("-o", "--output", default="results.csv", help="Output CSV")
-
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Estimate in-hospital mortality from an already calculated SAPS 3 score"
+    )
+    commands = parser.add_subparsers(dest="command", required=True)
+    single = commands.add_parser("single", help="Calculate the global-model probability")
+    single.add_argument("--score", required=True, help="Integer SAPS 3 score, 0 to 217")
+    batch = commands.add_parser("batch", help="Convert a CSV containing 'saps3_score'")
+    batch.add_argument("-i", "--input", required=True)
+    batch.add_argument("-o", "--output", default="results.csv")
     args = parser.parse_args(argv)
-
-    if args.command == "single":
-        args.func(args)
-    elif args.command == "batch":
-        process_batch(args.input, args.output)
+    try:
+        if args.command == "single":
+            print(json.dumps(calculate_metrics(saps3_score=args.score), indent=2))
+        else:
+            count = process_batch(args.input, args.output)
+            print(f"Processed {count} records -> {args.output}")
+    except (ValueError, FileNotFoundError, OSError) as exc:
+        parser.error(str(exc))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

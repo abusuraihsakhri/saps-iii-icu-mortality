@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "saps-iii-icu-mortality"
-version = "3.0.0"
-description = "Simplified Acute Physiology Score III (SAPS 3) - ICU Mortality Prediction"
+version = "3.1.0"
+description = "Global 2005 SAPS 3 in-hospital mortality estimate from a precomputed score"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
@@ -34,10 +34,15 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-cov",
+    "httpx>=0.27",
 ]
 
 [project.scripts]
-saps-iii = "cli:main"
+saps-iii = "saps3_calc:main"
+saps-iii-audit = "cli:main"
+
+[tool.setuptools]
+py-modules = ["cli", "saps3_calc", "enrichment", "simulator"]
 
 [tool.setuptools.packages.find]
 include = ["agents*"]

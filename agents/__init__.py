@@ -1,7 +1,7 @@
 """
 Saps Iii Icu Mortality — Enterprise Automated Analytical Suite.
 Domain: Clinical & Biomedical AI
-Standard: CAP / CLSI / ISO Standards
+Legacy audit components; not validated clinical scoring
 
 """
-__version__ = "3.0.0-ENTERPRISE"
+__version__ = "3.1.0"

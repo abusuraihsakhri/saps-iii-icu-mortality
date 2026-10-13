@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Saps Iii Icu Mortality API",
-    "description": "Enterprise Distributed Component Platform (Clinical & Cryptographic AI) adhering to CAP / CLSI / NIST Standards.",
-    "version": "3.0.0-ENTERPRISE",
+    "title": "SAPS 3 global hospital mortality API",
+    "description": "Convert a precomputed SAPS 3 score to a global-model estimate of in-hospital mortality. Legacy audit endpoints are demonstrations only. Runtime /openapi.json is canonical; this is a lightweight public API overview.",
+    "version": "3.1.0",
     "contact": {
       "name": "Dr. Abu Suraih Sakhri",
       "url": "https://github.com/abusuraihsakhri"
@@ -15,14 +15,14 @@
         "summary": "Health and metadata check",
         "responses": {
           "200": {
-            "description": "System optimal"
+            "description": "Application health status"
           }
         }
       }
     },
     "/metrics": {
       "get": {
-        "summary": "Prometheus operational metrics",
+        "summary": "In-memory demonstration counters (JSON)",
         "responses": {
           "200": {
             "description": "Prometheus text metrics"
@@ -32,7 +32,7 @@
     },
     "/api/audit": {
       "post": {
-        "summary": "Dispatch task payload across specialized workers",
+        "summary": "Legacy synthetic-threshold demonstration (not SAPS 3)",
         "requestBody": {
           "content": {
             "application/json": {
@@ -76,7 +76,7 @@
     },
     "/api/chat": {
       "post": {
-        "summary": "Air-gapped supervisory conversational assistant",
+        "summary": "Legacy mock-chat demonstration (not clinical)",
         "requestBody": {
           "content": {
             "application/json": {
@@ -107,6 +107,49 @@
         "responses": {
           "200": {
             "description": "Cryptographic audit trail"
+          }
+        }
+      }
+    },
+    "/api/mortality": {
+      "post": {
+        "summary": "Convert a precomputed SAPS 3 admission score",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "saps3_score"
+                ],
+                "properties": {
+                  "saps3_score": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 217
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Global-model estimated in-hospital mortality and model metadata"
+          },
+          "422": {
+            "description": "Invalid input"
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Serve the standalone browser calculator",
+        "responses": {
+          "200": {
+            "description": "HTML calculator"
           }
         }
       }

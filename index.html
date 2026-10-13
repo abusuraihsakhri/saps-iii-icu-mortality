@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Convert a precomputed SAPS 3 admission score to the global-model estimate of in-hospital mortality.">
+  <title>SAPS 3 | Hospital Mortality Estimate</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; --bg:#0c1423; --surface:#142239; --stroke:#34445b; --text:#f0f5fc; --muted:#b7c5d7; --accent:#65bbff; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); line-height:1.55; }
+    .wrap { max-width:850px; margin:auto; padding:clamp(1.1rem,4vw,3rem); }
+    h1 { font-size:clamp(1.8rem,4vw,2.5rem); margin:0 0 .3rem; line-height:1.2; }
+    h2 { font-size:1.2rem; margin:0 0 1rem; }
+    p { margin:.6rem 0 1rem; }
+    .lede { color:var(--muted); max-width:68ch; }
+    .tag { color:var(--accent); font-size:.82rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
+    .columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1rem; margin:2rem 0; }
+    .card { border:1px solid var(--stroke); background:var(--surface); border-radius:14px; padding:1.5rem; }
+    label { display:block; font-weight:650; margin-bottom:.5rem; }
+    input { width:100%; background:#0a1527; color:var(--text); font:inherit; border:1px solid #73849a; border-radius:7px; padding:.7rem; }
+    input:focus-visible,button:focus-visible,a:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+    button { background:var(--accent); color:#031b2e; font:inherit; font-weight:700; border:0; border-radius:7px; padding:.72rem 1.2rem; width:100%; margin-top:1rem; cursor:pointer; }
+    button:hover { background:#a7dcff; }
+    small,.hint { display:block; font-size:.86rem; color:var(--muted); margin-top:.5rem; }
+    .value { font-variant-numeric:tabular-nums; font-size:clamp(2.2rem,5vw,3.5rem); font-weight:750; line-height:1.15; margin:.5rem 0; }
+    .track { height:.85rem; background:#33435a; border-radius:1rem; margin:.9rem 0; overflow:hidden; }
+    .fill { height:100%; width:0%; background:var(--accent); transition:width 180ms ease-out; }
+    .error { min-height:1.5rem; color:#ffadb3; font-weight:600; }
+    a { color:#9bd3ff; }
+    details { border-top:1px solid var(--stroke); margin-top:1rem; padding-top:1rem; }
+    summary { cursor:pointer; font-weight:650; }
+    footer { border-top:1px solid var(--stroke); padding-top:1rem; margin-top:2rem; color:var(--muted); font-size:.9rem; }
+    @media (max-width:650px) { .columns { grid-template-columns:1fr; } .card { padding:1.15rem; } }
+    @media (prefers-reduced-motion:reduce) { .fill { transition:none; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <p class="tag">Clinical statistics · global model (2005)</p>
+    <h1>SAPS 3 hospital mortality estimator</h1>
+    <p class="lede">Convert an <strong>already calculated</strong> Simplified Acute Physiology Score 3 (SAPS 3) admission score to the predicted probability of death <strong>before hospital discharge</strong>. This does not calculate the 20-variable score itself.</p>
+    <div class="columns">
+      <section class="card" aria-labelledby="input-heading">
+        <h2 id="input-heading">Enter SAPS 3 score</h2>
+        <form id="score-form" novalidate>
+          <label for="score">Total SAPS 3 admission score</label>
+          <input id="score" name="score" type="number" required min="0" max="217" step="1" inputmode="numeric" value="50" aria-describedby="score-hint error">
+          <small id="score-hint">Enter a whole number from 0 to 217, calculated using the published admission score sheet.</small>
+          <button type="submit">Calculate estimated mortality</button>
+        </form>
+        <p class="error" id="error" role="alert"></p>
+      </section>
+      <section class="card" aria-labelledby="result-heading">
+        <h2 id="result-heading">Predicted in-hospital mortality</h2>
+        <div aria-live="polite" aria-atomic="true">
+          <p class="value" id="mortality">17.35%</p>
+          <p class="hint" id="result-caption">For SAPS 3 score 50 · global 2005 calibration</p>
+        </div>
+        <div class="track" aria-hidden="true"><div class="fill" id="bar" style="width:17.35%"></div></div>
+        <small>Population-level model estimate, not an individual prognosis or a treatment threshold.</small>
+      </section>
+    </div>
+    <section aria-labelledby="methods-heading">
+      <h2 id="methods-heading">Method and limitations</h2>
+      <p>The original <em>global</em> SAPS 3 model uses <code>logit = −32.6659 + 7.3068 × ln(score + 20.5958)</code>, followed by <code>p = 1 / (1 + e<sup>−logit</sup>)</code>. Its endpoint is <strong>hospital mortality</strong>, not ICU mortality.</p>
+      <p>SAPS 3 uses variables assessed at or within approximately one hour of ICU admission. Local case mix and geographic calibration affect accuracy. This tool does not validate score entry, select regional equations, or provide clinical decisions.</p>
+      <details>
+        <summary>Source and data handling</summary>
+        <p>Moreno RP et al. SAPS 3—From evaluation of the patient to evaluation of the intensive care unit. Part 2. <em>Intensive Care Medicine</em> 2005;31:1345–1355. <a href="https://doi.org/10.1007/s00134-005-2763-5" rel="noopener noreferrer" target="_blank">DOI: 10.1007/s00134-005-2763-5</a>.</p>
+        <p>Calculations run in your browser using JavaScript. This page sends no entered scores to a server, has no analytics, and stores no input. Do not enter patient identifiers.</p>
+      </details>
+    </section>
+    <footer>For research and education only. Do not use as a standalone clinical decision-support system.</footer>
+  </main>
+  <script>
+    "use strict";
+    const form = document.getElementById("score-form");
+    const scoreField = document.getElementById("score");
+    const result = document.getElementById("mortality");
+    const caption = document.getElementById("result-caption");
+    const error = document.getElementById("error");
+    const bar = document.getElementById("bar");
+    function mortalityProbability(score) {
+      const logit = -32.6659 + 7.3068 * Math.log(score + 20.5958);
+      return logit >= 0 ? 1 / (1 + Math.exp(-logit)) : Math.exp(logit) / (1 + Math.exp(logit));
+    }
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      const raw = scoreField.value.trim();
+      const score = Number(raw);
+      if (raw === "" || !Number.isInteger(score) || score < 0 || score > 217) {
+        error.textContent = "Enter an integer SAPS 3 score between 0 and 217.";
+        result.textContent = "—";
+        caption.textContent = "No valid score supplied";
+        bar.style.width = "0%";
+        scoreField.setAttribute("aria-invalid", "true");
+        return;
+      }
+      const percentage = 100 * mortalityProbability(score);
+      error.textContent = "";
+      scoreField.removeAttribute("aria-invalid");
+      result.textContent = percentage.toFixed(2) + "%";
+      caption.textContent = "For SAPS 3 score " + score + " · global 2005 calibration";
+      bar.style.width = percentage.toFixed(2) + "%";
+    });
+  </script>
+</body>
+</html>

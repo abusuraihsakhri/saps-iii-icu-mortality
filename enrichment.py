@@ -1,6 +1,6 @@
 """
 Enrichment Feature Implementation for saps-iii-icu-mortality.
-Generated based on domain-specific requirements in specifications.
+Legacy threshold demonstrations only. These are NOT validated clinical engines.
 """
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional, Tuple
@@ -39,13 +39,13 @@ class VentilatorWeaningReadinessPredictionEngine:
         if primary_value > self.threshold * 2:
             status = "CRITICAL_ALERT"
             alerts.append(f"Ventilator Weaning Readiness Prediction: Primary value {primary_value:.2f} breached critical threshold ({self.threshold * 2:.2f})")
-            recs.append("Initiate immediate protocol review and escalate to attending lead.")
+            recs.append("Synthetic threshold exceeded; no clinical action should be based on this output.")
         elif primary_value > self.threshold:
             status = "WARNING"
             alerts.append(f"Ventilator Weaning Readiness Prediction: Value {primary_value:.2f} exceeds baseline threshold ({self.threshold:.2f})")
-            recs.append("Increase monitoring frequency and perform secondary verification.")
+            recs.append("Demonstration-only warning; use independently validated clinical protocols.")
         else:
-            recs.append("Parameters nominal under standard operating bounds.")
+            recs.append("Synthetic threshold not exceeded; this is not a safety determination.")
 
         res = VentilatorWeaningReadinessPredictionEngineResult(
             feature_name="Ventilator Weaning Readiness Prediction",

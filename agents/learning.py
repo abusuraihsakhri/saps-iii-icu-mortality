@@ -1,5 +1,5 @@
 """
-Autonomous Bayesian Calibration & Active Learning Feedback Engine for saps-iii-icu-mortality.
+Synthetic agreement-count weighting demo (not Bayesian calibration) for saps-iii-icu-mortality.
 """
 import math
 from typing import Dict, Any, List, Optional

@@ -1,7 +1,7 @@
 """
 Pydantic v2 schemas and data definitions for Saps Iii Icu Mortality.
 Domain: Clinical & Biomedical AI
-Standard: CAP / CLSI / ISO Standards
+Legacy audit schemas: demonstration only; not an ICU triage standard
 """
 import datetime
 from enum import Enum
@@ -22,13 +22,13 @@ class SystemIntegrityStatus(str, Enum):
 
 
 class SystemTaskPayload(BaseModel):
-    task_id: str = Field(..., description="Unique task / case identifier")
-    target_identifier: str = Field(..., description="Entity, patient key, or genomic/cryptographic target")
-    primary_metric: float = Field(..., description="Primary domain measurement or score")
-    secondary_metric: float = Field(default=0.0, description="Secondary kinetic or confidence score")
-    status_descriptor: str = Field(default="NOMINAL", description="Status code or phenotype descriptor")
+    task_id: str = Field(..., min_length=1, max_length=120, description="Demonstration task identifier; do not use patient identifiers")
+    target_identifier: str = Field(..., min_length=1, max_length=120, description="Synthetic target identifier; do not use patient identifiers")
+    primary_metric: float = Field(..., allow_inf_nan=False, description="Demonstration-only numeric input, not SAPS 3")
+    secondary_metric: float = Field(default=0.0, allow_inf_nan=False, description="Demonstration-only numeric input")
+    status_descriptor: str = Field(default="NOMINAL", max_length=160, description="Demonstration status")
     is_critical_flag: bool = Field(default=False, description="Emergency escalation or high priority trigger")
-    attributes: Dict[str, Any] = Field(default_factory=dict, description="Metadata key-value pairs")
+    attributes: Dict[str, Any] = Field(default_factory=dict, max_length=30, description="Non-sensitive demonstration metadata")
     timestamp: str = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
 
@@ -39,7 +39,7 @@ class AgentAlert(BaseModel):
     summary: str
     technical_details: str
     actionable_remediation: str
-    standard_reference: str = "CAP / CLSI / ISO Standards"
+    standard_reference: str = "Demonstration only; not a validated standard"
     timestamp: str = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:

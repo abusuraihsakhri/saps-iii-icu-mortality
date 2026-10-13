@@ -1,4 +1,4 @@
-name: Saps Iii Icu Mortality CI/CD & Security Verification
+name: SAPS 3 calculation and security checks
 
 on:
   push:
@@ -24,17 +24,24 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install fastapi uvicorn pydantic pytest
+        pip install -e ".[dev]"
 
     - name: Run Pytest Suite
       run: |
+        python -m compileall -q agents saps3_calc.py cli.py
+        python -m pip check
         pytest -v
 
-    - name: Security SAST & Zero-PHI Audit
+    - name: Audit signature validation smoke test
       run: |
         python -c "
         from agents.base import PHIGuard, AuditLogger
         import pytest
         assert AuditLogger.verify_integrity() is True
-        print('Security & Zero-PHI Audit Passed!')
+        print('In-memory audit signature checks passed')
         "
+
+    - name: Validate browser JavaScript syntax
+      run: |
+        python -c "import re; from pathlib import Path; html = Path('index.html').read_text(encoding='utf-8'); match = re.search(r'<script>(.*?)</script>', html, re.S); assert match, 'Missing embedded JavaScript'; Path('/tmp/saps3-browser.js').write_text(match.group(1))"
+        node --check /tmp/saps3-browser.js
